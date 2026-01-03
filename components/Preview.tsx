@@ -56,34 +56,38 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       }
     }
 
+    // DRAW WIRING
+    if (config.showWiring) {
+      drawWiring(ctx, config, width, height);
+    }
+
     if (config.showScaleOverlay) {
-      // Big Circle
+      // Big Circle - Thicker line
       ctx.beginPath();
       const centerX = width / 2;
       const centerY = height / 2;
       const radius = Math.min(width, height) * 0.45;
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 6;
       ctx.stroke();
 
-      // Crosshairs
+      // Crosshairs (X) - Thicker line
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(width, height);
       ctx.moveTo(width, 0);
       ctx.lineTo(0, height);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 5;
       ctx.stroke();
       
-      // Horizontal/Vertical center lines
+      // Horizontal center line - Slightly thicker (Vertical line removed per request)
       ctx.beginPath();
-      ctx.moveTo(width / 2, 0);
-      ctx.lineTo(width / 2, height);
       ctx.moveTo(0, height / 2);
       ctx.lineTo(width, height / 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     }
 
@@ -144,6 +148,187 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
 
   }, [config, canvasRef]);
 
+  function drawWiring(ctx: CanvasRenderingContext2D, cfg: ScreenConfig, width: number, height: number) {
+    const MAX_PIXELS_PER_PORT = 655360;
+    const cableColors = ['#f59e0b', '#10b981', '#3b82f6', '#9ca3af', '#ef4444', '#8b5cf6', '#ec4899'];
+    
+    interface PanelPoint {
+        x: number;
+        y: number;
+        pixels: number;
+    }
+
+    const orderedPanels: PanelPoint[] = [];
+    const W = cfg.mapWidth;
+    const H = cfg.mapHeight;
+
+    if (W <= 0 || H <= 0) return;
+
+    // Generate the ordered sequence of panels based on pattern
+    for (let i = 0; i < W * H; i++) {
+        let col = 0, row = 0;
+        
+        if (cfg.wiringPattern.startsWith('row')) {
+            row = Math.floor(i / W);
+            col = i % W;
+            if (cfg.wiringPattern === 'row-serpentine' && row % 2 !== 0) {
+                col = (W - 1) - col;
+            }
+        } else {
+            col = Math.floor(i / H);
+            row = i % H;
+            if (cfg.wiringPattern === 'col-serpentine' && col % 2 !== 0) {
+                row = (H - 1) - row;
+            }
+        }
+
+        // Apply Start Corner transformation
+        let finalCol = col;
+        let finalRow = row;
+        if (cfg.wiringStartCorner === 'TR') finalCol = (W - 1) - col;
+        if (cfg.wiringStartCorner === 'BL') finalRow = (H - 1) - row;
+        if (cfg.wiringStartCorner === 'BR') {
+            finalCol = (W - 1) - col;
+            finalRow = (H - 1) - row;
+        }
+
+        const isHalfRow = cfg.halfHeightRow && finalRow === H - 1;
+        const pHeight = isHalfRow ? cfg.panelHeightPx / 2 : cfg.panelHeightPx;
+        const pPixels = cfg.panelWidthPx * pHeight;
+        
+        orderedPanels.push({
+            x: finalCol * cfg.panelWidthPx + cfg.panelWidthPx / 2,
+            y: finalRow * cfg.panelHeightPx + pHeight / 2,
+            pixels: pPixels
+        });
+    }
+
+    // New splitting logic: respect column/row boundaries
+    const cables: PanelPoint[][] = [];
+    let currentCable: PanelPoint[] = [];
+    let currentCablePixels = 0;
+
+    const isRowPattern = cfg.wiringPattern.startsWith('row');
+    const unitSize = isRowPattern ? W : H;
+    const safeUnitSize = Math.max(1, unitSize);
+
+    // Group ordered panels into units (rows or columns)
+    for (let i = 0; i < orderedPanels.length; i += safeUnitSize) {
+        const unit = orderedPanels.slice(i, i + safeUnitSize);
+        const unitPixels = unit.reduce((sum, p) => sum + p.pixels, 0);
+
+        // Rule: "se estourar o limite de pixel terminar na coluna anterior"
+        // If adding this WHOLE unit exceeds the limit, finalize current cable and start a new one.
+        if (currentCablePixels + unitPixels > MAX_PIXELS_PER_PORT) {
+            
+            // If the current cable already has panels, close it.
+            if (currentCable.length > 0) {
+                cables.push(currentCable);
+                currentCable = [];
+                currentCablePixels = 0;
+            }
+
+            // Now, check if this unit alone is larger than the limit.
+            // If it is, we are forced to split the unit panel by panel.
+            if (unitPixels > MAX_PIXELS_PER_PORT) {
+                for (const p of unit) {
+                    if (currentCablePixels + p.pixels > MAX_PIXELS_PER_PORT && currentCable.length > 0) {
+                        cables.push(currentCable);
+                        currentCable = [];
+                        currentCablePixels = 0;
+                    }
+                    currentCable.push(p);
+                    currentCablePixels += p.pixels;
+                }
+            } else {
+                // The unit fits in a fresh cable.
+                currentCable = [...unit];
+                currentCablePixels = unitPixels;
+            }
+        } else {
+            // Unit fits entirely in current cable.
+            currentCable.push(...unit);
+            currentCablePixels += unitPixels;
+        }
+    }
+
+    if (currentCable.length > 0) {
+        cables.push(currentCable);
+    }
+
+    // Draw each cable path
+    cables.forEach((cable, cableIndex) => {
+        const color = cableColors[cableIndex % cableColors.length];
+        
+        // Draw main path line
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.moveTo(cable[0].x, cable[0].y);
+        for (let i = 1; i < cable.length; i++) {
+            ctx.lineTo(cable[i].x, cable[i].y);
+        }
+        ctx.stroke();
+
+        // Draw markers for this specific cable
+        for (let i = 0; i < cable.length; i++) {
+            const p = cable[i];
+            
+            if (i === 0) {
+                // Start - Triangle
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y - 10);
+                ctx.lineTo(p.x - 10, p.y + 8);
+                ctx.lineTo(p.x + 10, p.y + 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else if (i === cable.length - 1) {
+                // End - Square
+                ctx.fillStyle = '#bbb';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+                ctx.strokeRect(p.x - 8, p.y - 8, 16, 16);
+            } else {
+                // Node - Circle
+                ctx.fillStyle = '#222';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Arrow mid-way to next node
+            if (i < cable.length - 1) {
+                const next = cable[i+1];
+                const midX = (p.x + next.x) / 2;
+                const midY = (p.y + next.y) / 2;
+                const angle = Math.atan2(next.y - p.y, next.x - p.x);
+                
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(angle);
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(-6, -6);
+                ctx.lineTo(-6, 6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+    });
+  }
+
   // Helper functions
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: boolean, stroke: boolean) {
     ctx.beginPath();
@@ -161,7 +346,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     if (stroke) ctx.stroke();
   }
 
-  // Fixed reduce function to avoid shadowing and type mismatch between the function and the resulting number
   function reduce(numerator: number, denominator: number) {
     const calculateGcd = (a: number, b: number): number => {
       return b ? calculateGcd(b, a % b) : a;

@@ -11,6 +11,8 @@ const App: React.FC = () => {
     halfHeightRow: false,
     panelWidthPx: 128,
     panelHeightPx: 128,
+    panelWidthMm: 500,
+    panelHeightMm: 500,
     panelType: 'Paineis de LED',
     screenName: 'Screen 1',
     showScaleOverlay: true,
@@ -19,7 +21,10 @@ const App: React.FC = () => {
     showCoords: false,
     showLogo: false,
     color1: '#1c1c1c',
-    color2: '#fcfcfc'
+    color2: '#fcfcfc',
+    showWiring: false,
+    wiringPattern: 'row-serpentine',
+    wiringStartCorner: 'TL'
   });
 
   const [activeTab, setActiveTab] = useState<TabType>(TabType.TAMANHO);

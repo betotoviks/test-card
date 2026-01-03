@@ -19,6 +19,13 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
     : config.mapHeight * config.panelHeightPx;
   const totalPixels = screenWidth * screenHeight;
 
+  // physical area calculation
+  const physicalWidthM = (config.mapWidth * config.panelWidthMm) / 1000;
+  const physicalHeightM = config.halfHeightRow 
+    ? ((config.mapHeight - 0.5) * config.panelHeightMm) / 1000
+    : (config.mapHeight * config.panelHeightMm) / 1000;
+  const totalAreaM2 = physicalWidthM * physicalHeightM;
+
   // Aspect Ratio calculation
   const calculateGcd = (a: number, b: number): number => b ? calculateGcd(b, a % b) : a;
   const commonDivisor = calculateGcd(screenWidth, screenHeight);
@@ -44,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
         case TabType.COR: return 'Opções de cores';
         case TabType.SOBREPOSICAO: return 'Opções de sobreposição';
         case TabType.CALCULO: return 'Cálculos de Painel';
+        case TabType.FIACAO: return 'Opções de fiação';
         default: return `Opções de ${activeTab.toLowerCase()}`;
     }
   };
@@ -141,6 +149,27 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1">Largura física (mm)</label>
+                  <input
+                    type="number"
+                    value={config.panelWidthMm}
+                    onChange={(e) => updateConfig({ panelWidthMm: parseInt(e.target.value) || 0 })}
+                    className="w-full border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-zinc-800 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-500 mb-1">Altura física (mm)</label>
+                  <input
+                    type="number"
+                    value={config.panelHeightMm}
+                    onChange={(e) => updateConfig({ panelHeightMm: parseInt(e.target.value) || 0 })}
+                    className="w-full border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-zinc-800 text-white"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1">Tipo de painel</label>
                 <input
@@ -157,19 +186,19 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                     className="w-full border border-zinc-700 rounded-lg px-3 py-2 text-sm bg-zinc-800 text-white"
                     onChange={(e) => {
                         const val = e.target.value;
-                        if (val === 'hd') updateConfig({ panelWidthPx: 128, panelHeightPx: 128 });
-                        if (val === 's168') updateConfig({ panelWidthPx: 168, panelHeightPx: 168 });
-                        if (val === 'fhd') updateConfig({ panelWidthPx: 192, panelHeightPx: 192 });
-                        if (val === '128x256') updateConfig({ panelWidthPx: 128, panelHeightPx: 256 });
-                        if (val === '168x336') updateConfig({ panelWidthPx: 168, panelHeightPx: 336 });
+                        if (val === 'hd') updateConfig({ panelWidthPx: 128, panelHeightPx: 128, panelWidthMm: 500, panelHeightMm: 500 });
+                        if (val === 's168') updateConfig({ panelWidthPx: 168, panelHeightPx: 168, panelWidthMm: 500, panelHeightMm: 500 });
+                        if (val === 'fhd') updateConfig({ panelWidthPx: 192, panelHeightPx: 192, panelWidthMm: 500, panelHeightMm: 500 });
+                        if (val === '128x256') updateConfig({ panelWidthPx: 128, panelHeightPx: 256, panelWidthMm: 500, panelHeightMm: 1000 });
+                        if (val === '168x336') updateConfig({ panelWidthPx: 168, panelHeightPx: 336, panelWidthMm: 500, panelHeightMm: 1000 });
                     }}
                 >
                   <option value="custom">Tamanho personalizado</option>
-                  <option value="hd">Padrão 128x128</option>
-                  <option value="128x256">Padrão 128x256</option>
-                  <option value="s168">Padrão 168x168</option>
-                  <option value="168x336">Padrão 168x336</option>
-                  <option value="fhd">Padrão 192x192</option>
+                  <option value="hd">Padrão 128x128 (500mm)</option>
+                  <option value="128x256">Padrão 128x256 (500x1000mm)</option>
+                  <option value="s168">Padrão 168x168 (500mm)</option>
+                  <option value="168x336">Padrão 168x336 (500x1000mm)</option>
+                  <option value="fhd">Padrão 192x192 (500mm)</option>
                 </select>
               </div>
             </>
@@ -179,21 +208,134 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3">
                 <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Total de Painéis</p>
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total de Painéis</p>
                   <p className="text-xl font-mono text-white">{totalPanels}</p>
                 </div>
                 <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Resolução Total</p>
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Resolução Total</p>
                   <p className="text-xl font-mono text-white">{screenWidth} × {screenHeight} <span className="text-sm text-zinc-400">px</span></p>
                 </div>
                 <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Total de Pixels</p>
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total de Pixels</p>
                   <p className="text-xl font-mono text-white">{totalPixels.toLocaleString()}</p>
                 </div>
                 <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-xs text-zinc-500 uppercase font-bold mb-1">Proporção (Aspect Ratio)</p>
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Proporção (Aspect Ratio)</p>
                   <p className="text-xl font-mono text-white">{aspectRatio}</p>
                 </div>
+                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Tamanho Largura × Altura (m)</p>
+                  <p className="text-xl font-mono text-white">
+                    {physicalWidthM.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} × {physicalHeightM.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm text-zinc-400">m</span>
+                  </p>
+                </div>
+                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700 ring-2 ring-blue-500/20">
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Tamanho em metros quadrados (m²)</p>
+                  <p className="text-xl font-mono text-white">{totalAreaM2.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm text-zinc-400">m²</span></p>
+                  <p className="text-[10px] text-zinc-500 mt-1 italic">Dica: Ajuste as dimensões físicas em "Tamanho" para precisão.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === TabType.FIACAO && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-zinc-300">Exibir fiação da tela</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={config.showWiring}
+                    onChange={(e) => updateConfig({ showWiring: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Canto de Início</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'TL', label: 'Topo Esquerda' },
+                    { id: 'TR', label: 'Topo Direita' },
+                    { id: 'BL', label: 'Base Esquerda' },
+                    { id: 'BR', label: 'Base Direita' }
+                  ].map((corner) => (
+                    <button
+                      key={corner.id}
+                      onClick={() => updateConfig({ wiringStartCorner: corner.id as any })}
+                      className={`py-2 px-2 text-[10px] rounded border transition-all flex items-center justify-between ${
+                        config.wiringStartCorner === corner.id 
+                          ? 'border-blue-500 bg-blue-600/20 text-blue-400' 
+                          : 'border-zinc-800 bg-zinc-950/50 text-zinc-500 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span>{corner.label}</span>
+                      <span className="font-bold">{corner.id}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Conexão de Gabinete (Cabinet Connection)</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {/* Row Serpentine */}
+                  <button 
+                    onClick={() => updateConfig({ wiringPattern: 'row-serpentine' })}
+                    title="Horizontal Serpentine"
+                    className={`p-2 rounded border flex items-center justify-center transition-all ${config.wiringPattern === 'row-serpentine' ? 'border-blue-500 bg-blue-600/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700'}`}
+                  >
+                    <svg className="w-8 h-8 text-blue-400" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M6 10h20c2 0 2 6 0 6H6c-2 0-2 6 0 6h20" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M22 8l4 2-4 2M10 14l-4 2 4 2" fill="#f59e0b" stroke="none" />
+                    </svg>
+                  </button>
+
+                  {/* Col Serpentine */}
+                  <button 
+                    onClick={() => updateConfig({ wiringPattern: 'col-serpentine' })}
+                    title="Vertical Serpentine"
+                    className={`p-2 rounded border flex items-center justify-center transition-all ${config.wiringPattern === 'col-serpentine' ? 'border-blue-500 bg-blue-600/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700'}`}
+                  >
+                    <svg className="w-8 h-8 text-blue-400" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M10 6v20c0 2 6 2 6 0V6c0-2 6-2 6 0v20" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M8 22l2 4 2-4M14 10l2-4 2 4" fill="#f59e0b" stroke="none" />
+                    </svg>
+                  </button>
+
+                  {/* Row Straight (Z-pattern) */}
+                  <button 
+                    onClick={() => updateConfig({ wiringPattern: 'row-straight' })}
+                    title="Horizontal Straight (Z)"
+                    className={`p-2 rounded border flex items-center justify-center transition-all ${config.wiringPattern === 'row-straight' ? 'border-blue-500 bg-blue-600/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700'}`}
+                  >
+                    <svg className="w-8 h-8 text-blue-400" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M6 10h20M6 16h20M6 22h20" strokeLinecap="round" />
+                      <path d="M22 8l4 2-4 2M22 14l4 2-4 2M22 20l4 2-4 2" fill="#f59e0b" stroke="none" />
+                      <path d="M26 10l-4 3M26 16l-4 3" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
+                    </svg>
+                  </button>
+
+                  {/* Col Straight (N-pattern) */}
+                  <button 
+                    onClick={() => updateConfig({ wiringPattern: 'col-straight' })}
+                    title="Vertical Straight (N)"
+                    className={`p-2 rounded border flex items-center justify-center transition-all ${config.wiringPattern === 'col-straight' ? 'border-blue-500 bg-blue-600/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700'}`}
+                  >
+                    <svg className="w-8 h-8 text-blue-400" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M10 6v20M16 6v20M22 6v20" strokeLinecap="round" />
+                      <path d="M8 22l2 4 2-4M14 22l2 4 2-4M20 22l2 4 2-4" fill="#f59e0b" stroke="none" />
+                      <path d="M10 26l3-4M16 26l3-4" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-blue-900/10 border border-blue-500/20 p-3 rounded-lg">
+                <p className="text-[10px] text-blue-400/80 uppercase font-bold mb-1">Nota Técnica</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">A fiação respeita o limite de <span className="text-blue-400 font-mono">655.360</span> pixels por porta/cabo. Se o limite for excedido, a fiação termina na coluna/linha anterior.</p>
               </div>
             </div>
           )}
