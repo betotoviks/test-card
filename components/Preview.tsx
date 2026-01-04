@@ -22,14 +22,14 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         ? (config.mapHeight - 0.5) * config.panelHeightPx 
         : config.mapHeight * config.panelHeightPx;
 
+    if (width <= 0 || height <= 0) return;
+
     canvas.width = width;
     canvas.height = height;
 
-    // Clear background
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, width, height);
 
-    // Draw Checkerboard
     const rows = config.mapHeight;
     const cols = config.mapWidth;
     
@@ -41,12 +41,10 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         ctx.fillStyle = (r + c) % 2 === 0 ? config.color1 : config.color2;
         ctx.fillRect(c * config.panelWidthPx, r * config.panelHeightPx, config.panelWidthPx, pHeight);
 
-        // Grid lines
         ctx.strokeStyle = 'rgba(0,0,0,0.2)';
         ctx.lineWidth = 1;
         ctx.strokeRect(c * config.panelWidthPx, r * config.panelHeightPx, config.panelWidthPx, pHeight);
 
-        // Coordinates
         if (config.showCoords) {
            ctx.fillStyle = 'rgba(255,255,255,0.7)';
            ctx.font = '10px Inter';
@@ -56,13 +54,11 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       }
     }
 
-    // DRAW WIRING
     if (config.showWiring) {
       drawWiring(ctx, config, width, height);
     }
 
     if (config.showScaleOverlay) {
-      // Big Circle - Thicker line
       ctx.beginPath();
       const centerX = width / 2;
       const centerY = height / 2;
@@ -72,7 +68,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.lineWidth = 6;
       ctx.stroke();
 
-      // Crosshairs (X) - Thicker line
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(width, height);
@@ -82,7 +77,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.lineWidth = 5;
       ctx.stroke();
       
-      // Horizontal center line - Slightly thicker (Vertical line removed per request)
       ctx.beginPath();
       ctx.moveTo(0, height / 2);
       ctx.lineTo(width, height / 2);
@@ -91,17 +85,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.stroke();
     }
 
-    // Logo Placeholder
-    if (config.showLogo) {
-       ctx.fillStyle = 'white';
-       ctx.fillRect(20, 20, 60, 60);
-       ctx.fillStyle = 'black';
-       ctx.font = 'bold 12px Inter';
-       ctx.textAlign = 'center';
-       ctx.fillText('LOGO', 50, 55);
-    }
-
-    // User Name / Screen Name
     if (config.showUserName) {
       const labelText = config.screenName || 'Screen 1';
       ctx.font = 'bold 24px Inter';
@@ -123,7 +106,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.fillText(labelText, width / 2, height / 2);
     }
 
-    // Specifications Bar
     if (config.showSpecs) {
       const totalPanels = config.mapWidth * config.mapHeight;
       const aspectRatio = reduce(width, height).join(':');
@@ -150,12 +132,14 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
 
   function drawWiring(ctx: CanvasRenderingContext2D, cfg: ScreenConfig, width: number, height: number) {
     const MAX_PIXELS_PER_PORT = 655360;
-    const cableColors = ['#f59e0b', '#10b981', '#3b82f6', '#9ca3af', '#ef4444', '#8b5cf6', '#ec4899'];
+    const cableColors = ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#9ca3af'];
     
     interface PanelPoint {
         x: number;
         y: number;
         pixels: number;
+        col: number;
+        row: number;
     }
 
     const orderedPanels: PanelPoint[] = [];
@@ -164,25 +148,19 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
 
     if (W <= 0 || H <= 0) return;
 
-    // Generate the ordered sequence of panels based on pattern
+    // First generate the sequence of panels based on pattern
     for (let i = 0; i < W * H; i++) {
         let col = 0, row = 0;
-        
         if (cfg.wiringPattern.startsWith('row')) {
             row = Math.floor(i / W);
             col = i % W;
-            if (cfg.wiringPattern === 'row-serpentine' && row % 2 !== 0) {
-                col = (W - 1) - col;
-            }
+            if (cfg.wiringPattern === 'row-serpentine' && row % 2 !== 0) col = (W - 1) - col;
         } else {
             col = Math.floor(i / H);
             row = i % H;
-            if (cfg.wiringPattern === 'col-serpentine' && col % 2 !== 0) {
-                row = (H - 1) - row;
-            }
+            if (cfg.wiringPattern === 'col-serpentine' && col % 2 !== 0) row = (H - 1) - row;
         }
 
-        // Apply Start Corner transformation
         let finalCol = col;
         let finalRow = row;
         if (cfg.wiringStartCorner === 'TR') finalCol = (W - 1) - col;
@@ -199,114 +177,105 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         orderedPanels.push({
             x: finalCol * cfg.panelWidthPx + cfg.panelWidthPx / 2,
             y: finalRow * cfg.panelHeightPx + pHeight / 2,
-            pixels: pPixels
+            pixels: pPixels,
+            col: finalCol,
+            row: finalRow
         });
     }
 
-    // New splitting logic: respect column/row boundaries
+    // Now group them into cables respecting boundaries (columns or rows)
+    const unitSize = cfg.wiringPattern.startsWith('col') ? H : W;
     const cables: PanelPoint[][] = [];
     let currentCable: PanelPoint[] = [];
     let currentCablePixels = 0;
 
-    const isRowPattern = cfg.wiringPattern.startsWith('row');
-    const unitSize = isRowPattern ? W : H;
-    const safeUnitSize = Math.max(1, unitSize);
-
-    // Group ordered panels into units (rows or columns)
-    for (let i = 0; i < orderedPanels.length; i += safeUnitSize) {
-        const unit = orderedPanels.slice(i, i + safeUnitSize);
+    for (let i = 0; i < orderedPanels.length; i += unitSize) {
+        const unit = orderedPanels.slice(i, i + unitSize);
         const unitPixels = unit.reduce((sum, p) => sum + p.pixels, 0);
 
-        // Rule: "se estourar o limite de pixel terminar na coluna anterior"
-        // If adding this WHOLE unit exceeds the limit, finalize current cable and start a new one.
-        if (currentCablePixels + unitPixels > MAX_PIXELS_PER_PORT) {
-            
-            // If the current cable already has panels, close it.
+        // If this unit (whole col/row) fits in current cable
+        if (currentCablePixels + unitPixels <= MAX_PIXELS_PER_PORT) {
+            currentCable.push(...unit);
+            currentCablePixels += unitPixels;
+        } else {
+            // It doesn't fit. Finish current cable if not empty.
             if (currentCable.length > 0) {
                 cables.push(currentCable);
                 currentCable = [];
                 currentCablePixels = 0;
             }
-
-            // Now, check if this unit alone is larger than the limit.
-            // If it is, we are forced to split the unit panel by panel.
-            if (unitPixels > MAX_PIXELS_PER_PORT) {
-                for (const p of unit) {
-                    if (currentCablePixels + p.pixels > MAX_PIXELS_PER_PORT && currentCable.length > 0) {
-                        cables.push(currentCable);
-                        currentCable = [];
-                        currentCablePixels = 0;
-                    }
-                    currentCable.push(p);
-                    currentCablePixels += p.pixels;
-                }
-            } else {
-                // The unit fits in a fresh cable.
-                currentCable = [...unit];
+            
+            // Try to fit the unit into a new cable
+            if (unitPixels <= MAX_PIXELS_PER_PORT) {
+                currentCable.push(...unit);
                 currentCablePixels = unitPixels;
+            } else {
+                // The unit is physically larger than one port budget.
+                // We MUST split this unit at panel level.
+                for (const p of unit) {
+                    if (currentCablePixels + p.pixels > MAX_PIXELS_PER_PORT) {
+                        if (currentCable.length > 0) cables.push(currentCable);
+                        currentCable = [p];
+                        currentCablePixels = p.pixels;
+                    } else {
+                        currentCable.push(p);
+                        currentCablePixels += p.pixels;
+                    }
+                }
             }
-        } else {
-            // Unit fits entirely in current cable.
-            currentCable.push(...unit);
-            currentCablePixels += unitPixels;
         }
     }
+    if (currentCable.length > 0) cables.push(currentCable);
 
-    if (currentCable.length > 0) {
-        cables.push(currentCable);
-    }
-
-    // Draw each cable path
     cables.forEach((cable, cableIndex) => {
         const color = cableColors[cableIndex % cableColors.length];
         
-        // Draw main path line
+        // Draw the main path line
         ctx.beginPath();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.moveTo(cable[0].x, cable[0].y);
-        for (let i = 1; i < cable.length; i++) {
-            ctx.lineTo(cable[i].x, cable[i].y);
-        }
+        for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y);
         ctx.stroke();
 
-        // Draw markers for this specific cable
+        // Draw symbols and markers
         for (let i = 0; i < cable.length; i++) {
             const p = cable[i];
             
+            // Draw node marker
             if (i === 0) {
-                // Start - Triangle
-                ctx.fillStyle = color;
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
+                // Início da linha (Porta) - Triângulo
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.moveTo(p.x, p.y - 10);
-                ctx.lineTo(p.x - 10, p.y + 8);
-                ctx.lineTo(p.x + 10, p.y + 8);
+                ctx.moveTo(p.x, p.y - 14);
+                ctx.lineTo(p.x - 14, p.y + 12);
+                ctx.lineTo(p.x + 14, p.y + 12);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
             } else if (i === cable.length - 1) {
-                // End - Square
-                ctx.fillStyle = '#bbb';
+                // Fim da linha - Quadrado
+                ctx.fillStyle = 'white';
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
-                ctx.strokeRect(p.x - 8, p.y - 8, 16, 16);
+                ctx.lineWidth = 2.5;
+                ctx.fillRect(p.x - 11, p.y - 11, 22, 22);
+                ctx.strokeRect(p.x - 11, p.y - 11, 22, 22);
             } else {
-                // Node - Circle
-                ctx.fillStyle = '#222';
+                // Pontos intermediários - Círculo
+                ctx.fillStyle = 'white';
                 ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
 
-            // Arrow mid-way to next node
+            // Draw directional arrow on the line segment
             if (i < cable.length - 1) {
                 const next = cable[i+1];
                 const midX = (p.x + next.x) / 2;
@@ -318,9 +287,9 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
                 ctx.rotate(angle);
                 ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.moveTo(8, 0);
-                ctx.lineTo(-6, -6);
-                ctx.lineTo(-6, 6);
+                ctx.moveTo(14, 0);
+                ctx.lineTo(-10, -10);
+                ctx.lineTo(-10, 10);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
@@ -329,7 +298,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     });
   }
 
-  // Helper functions
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: boolean, stroke: boolean) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -347,20 +315,24 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
   }
 
   function reduce(numerator: number, denominator: number) {
-    const calculateGcd = (a: number, b: number): number => {
-      return b ? calculateGcd(b, a % b) : a;
-    };
+    const calculateGcd = (a: number, b: number): number => b ? calculateGcd(b, a % b) : a;
     const commonDivisor = calculateGcd(numerator, denominator);
     return [numerator / commonDivisor, denominator / commonDivisor];
   }
 
+  const isInvalidSize = (config.mapWidth <= 0 || config.mapHeight <= 0);
+
   return (
     <div ref={containerRef} className="max-w-full max-h-full flex items-center justify-center p-4">
-      <canvas 
-        ref={canvasRef} 
-        className="max-w-full max-h-[80vh] shadow-2xl bg-black rounded-sm border-4 border-white/10"
-        style={{ imageRendering: 'pixelated' }}
-      />
+      {!isInvalidSize ? (
+        <canvas 
+          ref={canvasRef} 
+          className="max-w-full max-h-[80vh] shadow-2xl bg-black rounded-sm border-4 border-white/10"
+          style={{ imageRendering: 'pixelated' }}
+        />
+      ) : (
+        <div className="text-zinc-400 font-medium italic">Defina as dimensões do mapa para visualizar</div>
+      )}
     </div>
   );
 };
