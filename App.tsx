@@ -161,6 +161,33 @@ const App: React.FC = () => {
         ctx.strokeStyle = 'rgba(0,0,0,0.1)';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(previewX + c * cfg.panelWidthPx * previewScale, previewY + r * cfg.panelHeightPx * previewScale, cfg.panelWidthPx * previewScale, h * previewScale);
+        
+        // Adicionar números em sequência se showCoords estiver ativo
+        if (cfg.showCoords) {
+          const panelIdx = (r * cfg.mapWidth) + (c + 1);
+          const fontSize = Math.max(12, 16 * previewScale * (screenWidth / 400)); 
+          ctx.font = `bold ${fontSize}px Inter`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          const text = `${panelIdx}`;
+          const metrics = ctx.measureText(text);
+          const padding = fontSize * 0.4;
+          const bgW = metrics.width + padding;
+          const bgH = fontSize + padding * 0.5;
+          const posX = previewX + (c + 0.5) * cfg.panelWidthPx * previewScale;
+          const posY = previewY + (r * cfg.panelHeightPx + h/2) * previewScale;
+
+          // Destaque para o número
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          const radius = 3;
+          ctx.beginPath();
+          ctx.roundRect(posX - bgW/2, posY - bgH/2, bgW, bgH, radius);
+          ctx.fill();
+
+          ctx.fillStyle = 'white';
+          ctx.fillText(text, posX, posY);
+        }
       }
     }
 

@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
 
   const totalPowerWatts = totalPanels * (config.panelWatts || 0);
   const totalKva = (totalPowerWatts / 0.8) / 1000;
+  const totalAmps = totalPanels * (config.panelAmps || 0);
 
   const handleWattsChange = (watts: number) => {
     const v = config.voltage || 220;
@@ -180,6 +181,10 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
         <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
           <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Proporção (Aspect Ratio)</p>
           <p className="text-lg font-mono text-white">{aspectRatio}</p>
+        </div>
+        <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
+          <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Consumo em Amperagem</p>
+          <p className="text-lg font-mono text-white">{totalAmps.toFixed(2)} <span className="text-xs text-zinc-400">A</span></p>
         </div>
         <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
           <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Resultado em kVA (FP 0.8)</p>

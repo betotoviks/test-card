@@ -46,10 +46,34 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         ctx.strokeRect(c * config.panelWidthPx, r * config.panelHeightPx, config.panelWidthPx, pHeight);
 
         if (config.showCoords) {
-           ctx.fillStyle = 'rgba(255,255,255,0.7)';
-           ctx.font = '10px Inter';
+           const panelIndex = (r * cols) + (c + 1);
+           // Tamanho dinâmico baseado no tamanho do painel, mas maior que antes
+           const fontSize = Math.floor(Math.min(config.panelWidthPx, pHeight) * 0.35);
+           ctx.font = `bold ${fontSize}px Inter`;
            ctx.textAlign = 'center';
-           ctx.fillText(`${c+1},${r+1}`, c * config.panelWidthPx + config.panelWidthPx/2, r * config.panelHeightPx + pHeight/2 + 4);
+           ctx.textBaseline = 'middle';
+           
+           const text = `${panelIndex}`;
+           const metrics = ctx.measureText(text);
+           const padding = fontSize * 0.4;
+           const bgW = metrics.width + padding;
+           const bgH = fontSize + padding * 0.5;
+           
+           // Desenhar fundo destacado
+           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+           roundRect(
+             ctx, 
+             c * config.panelWidthPx + config.panelWidthPx/2 - bgW/2, 
+             r * config.panelHeightPx + pHeight/2 - bgH/2, 
+             bgW, 
+             bgH, 
+             4, 
+             true, 
+             false
+           );
+           
+           ctx.fillStyle = 'white';
+           ctx.fillText(text, c * config.panelWidthPx + config.panelWidthPx/2, r * config.panelHeightPx + pHeight/2);
         }
       }
     }
