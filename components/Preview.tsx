@@ -18,9 +18,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     if (!ctx) return;
 
     const width = config.mapWidth * config.panelWidthPx;
-    const height = config.halfHeightRow 
-        ? (config.mapHeight - 0.5) * config.panelHeightPx 
-        : config.mapHeight * config.panelHeightPx;
+    const height = config.mapHeight * config.panelHeightPx;
 
     if (width <= 0 || height <= 0) return;
 
@@ -35,8 +33,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const isHalfRow = config.halfHeightRow && r === rows - 1;
-        const pHeight = isHalfRow ? config.panelHeightPx / 2 : config.panelHeightPx;
+        const pHeight = config.panelHeightPx;
         
         ctx.fillStyle = (r + c) % 2 === 0 ? config.color1 : config.color2;
         ctx.fillRect(c * config.panelWidthPx, r * config.panelHeightPx, config.panelWidthPx, pHeight);
@@ -99,13 +96,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.lineTo(0, height);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.lineWidth = 5;
-      ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.moveTo(0, height / 2);
-      ctx.lineTo(width, height / 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 2.5;
       ctx.stroke();
     }
 
@@ -194,8 +184,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
             finalRow = (H - 1) - row;
         }
 
-        const isHalfRow = cfg.halfHeightRow && finalRow === H - 1;
-        const pHeight = isHalfRow ? cfg.panelHeightPx / 2 : cfg.panelHeightPx;
+        const pHeight = cfg.panelHeightPx;
         const pPixels = cfg.panelWidthPx * pHeight;
         
         orderedPanels.push({

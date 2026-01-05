@@ -2,7 +2,6 @@
 export interface ScreenConfig {
   mapWidth: number;
   mapHeight: number;
-  halfHeightRow: boolean;
   panelWidthPx: number;
   panelHeightPx: number;
   panelWidthMm: number;

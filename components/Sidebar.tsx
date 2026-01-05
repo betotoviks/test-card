@@ -17,9 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
   
   const totalPanels = config.mapWidth * config.mapHeight;
   const screenWidth = config.mapWidth * config.panelWidthPx;
-  const screenHeight = config.halfHeightRow 
-    ? (config.mapHeight - 0.5) * config.panelHeightPx 
-    : config.mapHeight * config.panelHeightPx;
+  const screenHeight = config.mapHeight * config.panelHeightPx;
   const totalPixels = screenWidth * screenHeight;
 
   const totalPowerWatts = totalPanels * (config.panelWatts || 0);
@@ -69,9 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
   
   function numeratorPx() { return config.mapWidth * config.panelWidthPx; }
   function denominatorPx() { 
-    return config.halfHeightRow 
-      ? (config.mapHeight - 0.5) * config.panelHeightPx 
-      : config.mapHeight * config.panelHeightPx;
+    return config.mapHeight * config.panelHeightPx;
   }
 
   const commonDivisor = calculateGcd(numeratorPx(), denominatorPx());
@@ -270,14 +266,6 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                   <label className="block text-xs font-medium text-zinc-500 mb-1">Altura do mapa (n)</label>
                   <input type="number" value={config.mapHeight === 0 ? '' : config.mapHeight} onChange={(e) => updateConfig({ mapHeight: parseInt(e.target.value) || 0 })} className="w-full border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-zinc-800 text-white" />
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-300">Fileira de Meia Altura</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={config.halfHeightRow} onChange={(e) => updateConfig({ halfHeightRow: e.target.checked })} />
-                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

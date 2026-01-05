@@ -9,7 +9,6 @@ const App: React.FC = () => {
   const [config, setConfig] = useState<ScreenConfig>({
     mapWidth: 16,
     mapHeight: 9,
-    halfHeightRow: false,
     panelWidthPx: 128,
     panelHeightPx: 128,
     panelWidthMm: 500,
@@ -17,7 +16,7 @@ const App: React.FC = () => {
     panelType: 'P3',
     screenName: 'Screen 1',
     techSheetTitle: 'Pixel mapping',
-    showScaleOverlay: true,
+    showScaleOverlay: false,
     showUserName: false,
     showSpecs: false,
     showCoords: false,
@@ -72,7 +71,7 @@ const App: React.FC = () => {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     const screenWidth = cfg.mapWidth * cfg.panelWidthPx;
-    const screenHeight = cfg.halfHeightRow ? (cfg.mapHeight - 0.5) * cfg.panelHeightPx : cfg.mapHeight * cfg.panelHeightPx;
+    const screenHeight = cfg.mapHeight * cfg.panelHeightPx;
     
     const previewAreaSize = 450;
     const previewScale = Math.min(previewAreaSize / screenWidth, previewAreaSize / screenHeight);
@@ -96,7 +95,7 @@ const App: React.FC = () => {
 
     const totalPanels = cfg.mapWidth * cfg.mapHeight;
     const physicalWidthM = (cfg.mapWidth * cfg.panelWidthMm) / 1000;
-    const physicalHeightM = cfg.halfHeightRow ? ((cfg.mapHeight - 0.5) * cfg.panelHeightMm) / 1000 : (cfg.mapHeight * cfg.panelHeightMm) / 1000;
+    const physicalHeightM = (cfg.mapHeight * cfg.panelHeightMm) / 1000;
     const totalAmps = totalPanels * (cfg.panelAmps || 0);
     const totalPixels = screenWidth * screenHeight;
 
@@ -154,8 +153,7 @@ const App: React.FC = () => {
     // Desenha o mapa quadriculado
     for (let r = 0; r < cfg.mapHeight; r++) {
       for (let c = 0; c < cfg.mapWidth; c++) {
-        const isHalf = cfg.halfHeightRow && r === cfg.mapHeight - 1;
-        const h = isHalf ? cfg.panelHeightPx / 2 : cfg.panelHeightPx;
+        const h = cfg.panelHeightPx;
         ctx.fillStyle = (r + c) % 2 === 0 ? cfg.color1 : cfg.color2;
         ctx.fillRect(previewX + c * cfg.panelWidthPx * previewScale, previewY + r * cfg.panelHeightPx * previewScale, cfg.panelWidthPx * previewScale, h * previewScale);
         ctx.strokeStyle = 'rgba(0,0,0,0.1)';
