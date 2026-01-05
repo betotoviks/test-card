@@ -36,6 +36,5 @@ export enum TabType {
   COR = 'Cor',
   CALCULO = 'Cálculo',
   FIACAO = 'Fiação',
-  ENERGIA = 'Energia',
   FICHA_TECNICA = 'Ficha Técnica'
 }

@@ -239,13 +239,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <TabButton type={TabType.TAMANHO} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>} />
         <TabButton type={TabType.SOBREPOSICAO} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
         <TabButton type={TabType.COR} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>} />
         <TabButton type={TabType.CALCULO} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2-2v14a2 2 0 002 2z" /></svg>} />
         <TabButton type={TabType.FIACAO} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
-        <TabButton type={TabType.ENERGIA} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
         <TabButton type={TabType.FICHA_TECNICA} icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} />
       </div>
 
@@ -426,29 +425,6 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
 
           {activeTab === TabType.CALCULO && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total de Painéis</p>
-                  <p className="text-xl font-mono text-white">{totalPanels}</p>
-                </div>
-                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Resolução Total</p>
-                  <p className="text-xl font-mono text-white">{screenWidth} × {screenHeight} <span className="text-sm text-zinc-400">px</span></p>
-                </div>
-                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total de Pixels</p>
-                  <p className="text-xl font-mono text-white">{totalPixels.toLocaleString()}</p>
-                </div>
-                <div className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Proporção (Aspect Ratio)</p>
-                  <p className="text-xl font-mono text-white">{aspectRatio}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === TabType.ENERGIA && (
-            <div className="space-y-4">
               <div className="space-y-3 mb-6 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
                 <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Parâmetros de Entrada</p>
                 <div className="mb-4">
@@ -466,7 +442,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                   </div>
                 </div>
               </div>
-
+              
               <CalculationSummary />
             </div>
           )}
