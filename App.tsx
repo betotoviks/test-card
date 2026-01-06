@@ -26,6 +26,7 @@ const App: React.FC = () => {
     logoY: 450,
     color1: '#000350',
     color2: '#00f4ff',
+    showBackground: false,
     showWiring: false,
     wiringPattern: 'row-serpentine',
     wiringStartCorner: 'TL',
@@ -129,7 +130,7 @@ const App: React.FC = () => {
     ctx.font = '18px Inter';
     ctx.fillText('Software de Video: RESOLUME', statsX + 10, statsStartY + 305);
 
-    // Especificações de Video Box - Corrigido para evitar sobreposição
+    // Especificações de Video Box
     ctx.fillStyle = '#f3f4f6';
     ctx.fillRect(statsX, statsStartY + 360, statsBoxWidth, 140);
     ctx.fillStyle = 'black';
@@ -150,17 +151,28 @@ const App: React.FC = () => {
     ctx.textAlign = 'center';
     ctx.fillText('LED', previewX + previewW/2, previewY - 30);
 
+    // Background Image se houver e estiver ativa
+    if (cfg.showBackground && cfg.backgroundUrl) {
+      const bgImg = new Image();
+      bgImg.src = cfg.backgroundUrl;
+      if (bgImg.complete) {
+        ctx.drawImage(bgImg, previewX, previewY, previewW, previewH);
+      }
+    }
+
     // Desenha o mapa quadriculado
     for (let r = 0; r < cfg.mapHeight; r++) {
       for (let c = 0; c < cfg.mapWidth; c++) {
         const h = cfg.panelHeightPx;
-        ctx.fillStyle = (r + c) % 2 === 0 ? cfg.color1 : cfg.color2;
-        ctx.fillRect(previewX + c * cfg.panelWidthPx * previewScale, previewY + r * cfg.panelHeightPx * previewScale, cfg.panelWidthPx * previewScale, h * previewScale);
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        if (!cfg.showBackground || !cfg.backgroundUrl) {
+          ctx.fillStyle = (r + c) % 2 === 0 ? cfg.color1 : cfg.color2;
+          ctx.fillRect(previewX + c * cfg.panelWidthPx * previewScale, previewY + r * cfg.panelHeightPx * previewScale, cfg.panelWidthPx * previewScale, h * previewScale);
+        }
+        
+        ctx.strokeStyle = cfg.showBackground ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(previewX + c * cfg.panelWidthPx * previewScale, previewY + r * cfg.panelHeightPx * previewScale, cfg.panelWidthPx * previewScale, h * previewScale);
         
-        // Adicionar números em sequência se showCoords estiver ativo
         if (cfg.showCoords) {
           const panelIdx = (r * cfg.mapWidth) + (c + 1);
           const fontSize = Math.max(12, 16 * previewScale * (screenWidth / 400)); 
@@ -176,7 +188,6 @@ const App: React.FC = () => {
           const posX = previewX + (c + 0.5) * cfg.panelWidthPx * previewScale;
           const posY = previewY + (r * cfg.panelHeightPx + h/2) * previewScale;
 
-          // Destaque para o número
           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
           const radius = 3;
           ctx.beginPath();
@@ -189,7 +200,7 @@ const App: React.FC = () => {
       }
     }
 
-    // Círculo de sobreposição se habilitado
+    // Círculo de sobreposição
     if (cfg.showScaleOverlay) {
       const miniCenterX = previewX + previewW / 2;
       const miniCenterY = previewY + previewH / 2;
@@ -210,10 +221,8 @@ const App: React.FC = () => {
     ctx.fillStyle = 'red';
     ctx.font = 'bold 28px Inter';
     ctx.textAlign = 'center';
-    // Largura
     ctx.fillText(`${screenWidth}px`, previewX + previewW / 2, previewY + previewH + 45);
     
-    // Altura (Vertical no lado esquerdo)
     ctx.save();
     ctx.translate(previewX - 60, previewY + previewH / 2);
     ctx.rotate(-Math.PI / 2);
@@ -245,21 +254,59 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50 text-slate-800">
       <div className="w-full md:w-96 bg-zinc-950 shadow-xl flex-shrink-0 z-10 overflow-y-auto max-h-screen border-r border-zinc-800 text-zinc-100">
-        <div className="p-4 bg-blue-600 text-white flex items-center justify-center gap-2 font-semibold shadow-md">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-          Telas
+        {/* Branded Header with Dynamic Logo */}
+        <div className="p-4 bg-zinc-900 border-b border-zinc-800 flex items-center gap-4 transition-all hover:bg-zinc-800/80">
+          <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-white shadow-lg overflow-hidden border border-zinc-700">
+             {config.logoUrl ? (
+               <img src={config.logoUrl} className="w-full h-full object-contain" alt="Logo" />
+             ) : (
+               <svg className="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                 <path d="M4 10l8-6 8 6v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z" />
+                 <path d="M12 22v-9" strokeLinecap="round"/>
+                 <path d="M9 13h6" strokeLinecap="round"/>
+               </svg>
+             )}
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-base font-black text-white tracking-tighter leading-none">BETO TOVIKS</h1>
+            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.2em] mt-1">LED SOLUTIONS</span>
+          </div>
         </div>
+
         <div className="p-4">
-          <h2 className="text-xl font-bold mb-4 text-white">Configurações de tela</h2>
+          <h2 className="text-sm font-bold mb-4 text-zinc-500 uppercase tracking-widest">Configurações de tela</h2>
           <Sidebar config={config} activeTab={activeTab} setActiveTab={setActiveTab} updateConfig={updateConfig} onExport={handleExport} onExportTechSheet={handleExportTechnicalSheet} onReset={resetProject} />
         </div>
       </div>
+      
       <div className="flex-grow flex items-center justify-center p-8 bg-gray-300 overflow-hidden relative transition-colors duration-200">
-        <div className="relative w-full h-full flex items-center justify-center">
+        {/* Main Workspace Watermark with Logo Support */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none">
+           {config.logoUrl ? (
+             <img src={config.logoUrl} className="max-w-[40vw] max-h-[40vh] object-contain grayscale transform -rotate-12" alt="Watermark" />
+           ) : (
+             <h1 className="text-[15vw] font-black tracking-tighter transform -rotate-12">BETO TOVIKS</h1>
+           )}
+        </div>
+        
+        <div className="absolute top-8 left-8 flex items-center gap-2 opacity-30 pointer-events-none">
+           <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white overflow-hidden">
+              {config.logoUrl ? (
+                <img src={config.logoUrl} className="w-full h-full object-contain" alt="Logo" />
+              ) : (
+                <span className="text-xs font-bold">BT</span>
+              )}
+           </div>
+           <span className="text-sm font-black text-zinc-900 uppercase tracking-widest">BETO TOVIKS</span>
+        </div>
+
+        <div className="relative w-full h-full flex items-center justify-center z-10">
             {activeTab === TabType.FICHA_TECNICA ? <TechSheetPreview config={config} canvasRef={techSheetRef} onRender={renderTechSheet} /> : <Preview config={config} canvasRef={canvasRef} />}
         </div>
-        <div className="absolute bottom-6 right-6 bg-white px-4 py-2 rounded-full shadow-lg text-sm font-medium border border-gray-100">
-            {config.mapWidth * config.panelWidthPx} x {config.mapHeight * config.panelHeightPx} px
+        
+        <div className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-2xl text-[11px] font-bold text-zinc-800 border border-white/50 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+            {config.mapWidth * config.panelWidthPx} x {config.mapHeight * config.panelHeightPx} PX
         </div>
       </div>
     </div>

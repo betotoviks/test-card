@@ -20,6 +20,9 @@ export interface ScreenConfig {
   logoY: number;
   color1: string;
   color2: string;
+  // Fix: Missing background properties used in App.tsx
+  showBackground: boolean;
+  backgroundUrl?: string;
   // Wiring Config
   showWiring: boolean;
   wiringPattern: 'row-serpentine' | 'col-serpentine' | 'row-straight' | 'col-straight';
