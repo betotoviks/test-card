@@ -9,6 +9,7 @@ export interface ScreenConfig {
   panelType: string;
   screenName: string;
   techSheetTitle: string;
+  techSheetStatsTitle: string; // New field for the "LED" text editor
   showScaleOverlay: boolean;
   showUserName: boolean;
   showSpecs: boolean;

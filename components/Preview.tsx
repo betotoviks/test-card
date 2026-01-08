@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { ScreenConfig } from '../types';
 
@@ -9,6 +8,8 @@ interface PreviewProps {
 
 const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const calculateGcd = (a: number, b: number): number => b ? calculateGcd(b, a % b) : a;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -44,33 +45,14 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
 
         if (config.showCoords) {
            const panelIndex = (r * cols) + (c + 1);
-           // Tamanho dinâmico baseado no tamanho do painel, mas maior que antes
-           const fontSize = Math.floor(Math.min(config.panelWidthPx, pHeight) * 0.35);
+           const fontSize = Math.floor(Math.min(config.panelWidthPx, pHeight) * 0.3);
            ctx.font = `bold ${fontSize}px Inter`;
            ctx.textAlign = 'center';
            ctx.textBaseline = 'middle';
-           
-           const text = `${panelIndex}`;
-           const metrics = ctx.measureText(text);
-           const padding = fontSize * 0.4;
-           const bgW = metrics.width + padding;
-           const bgH = fontSize + padding * 0.5;
-           
-           // Desenhar fundo destacado
-           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-           roundRect(
-             ctx, 
-             c * config.panelWidthPx + config.panelWidthPx/2 - bgW/2, 
-             r * config.panelHeightPx + pHeight/2 - bgH/2, 
-             bgW, 
-             bgH, 
-             4, 
-             true, 
-             false
-           );
-           
+           ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+           ctx.fillRect(c * config.panelWidthPx + config.panelWidthPx/2 - fontSize*0.8, r * config.panelHeightPx + pHeight/2 - fontSize*0.6, fontSize*1.6, fontSize*1.2);
            ctx.fillStyle = 'white';
-           ctx.fillText(text, c * config.panelWidthPx + config.panelWidthPx/2, r * config.panelHeightPx + pHeight/2);
+           ctx.fillText(`${panelIndex}`, c * config.panelWidthPx + config.panelWidthPx/2, r * config.panelHeightPx + pHeight/2);
         }
       }
     }
@@ -80,66 +62,83 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     }
 
     if (config.showScaleOverlay) {
-      ctx.beginPath();
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const radius = Math.min(width, height) * 0.45;
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.lineWidth = 6;
-      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = Math.max(4, width / 400);
 
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(width, height);
       ctx.moveTo(width, 0);
       ctx.lineTo(0, height);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(width / 2, 0);
+      ctx.lineTo(width / 2, height);
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(width / 2, height / 2, Math.min(width, height) * 0.4, 0, 2 * Math.PI);
       ctx.stroke();
     }
 
-    if (config.showUserName) {
-      const labelText = config.screenName || 'Screen 1';
-      ctx.font = 'bold 24px Inter';
-      const metrics = ctx.measureText(labelText);
-      const textWidth = metrics.width;
-      const paddingX = 30;
-      const paddingY = 15;
-      const rectWidth = textWidth + paddingX * 2;
-      const rectHeight = 40 + paddingY;
-
-      ctx.fillStyle = 'white';
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 2;
-      roundRect(ctx, (width - rectWidth) / 2, (height - rectHeight) / 2, rectWidth, rectHeight, 10, true, true);
-
-      ctx.fillStyle = 'black';
+    if (config.showUserName && config.screenName) {
+      const fontSize = Math.max(16, height / 20);
+      ctx.font = `bold ${fontSize}px Inter`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(labelText, width / 2, height / 2);
+      
+      const text = config.screenName;
+      const metrics = ctx.measureText(text);
+      const paddingX = fontSize * 1.5;
+      const paddingY = fontSize * 0.8;
+      const boxW = metrics.width + paddingX;
+      const boxH = fontSize + paddingY;
+      
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.roundRect(centerX - boxW/2, centerY - boxH/2, boxW, boxH, 8);
+      ctx.fill();
+      
+      ctx.fillStyle = 'black';
+      ctx.fillText(text, centerX, centerY);
     }
 
     if (config.showSpecs) {
       const totalPanels = config.mapWidth * config.mapHeight;
-      const aspectRatio = reduce(width, height).join(':');
-      const specText = `Panel Count: ${config.mapWidth} wide × ${config.mapHeight} high • ${totalPanels} panels total • Resolution: ${width} × ${height} px • Aspect Ratio: ${aspectRatio}`;
+      const commonDivisor = calculateGcd(width, height);
+      const aspectRatio = commonDivisor ? `${width / commonDivisor}:${height / commonDivisor}` : 'N/A';
       
-      ctx.font = '14px Inter';
-      const specMetrics = ctx.measureText(specText);
-      const barWidth = specMetrics.width + 40;
-      const barHeight = 30;
-      const barY = height - barHeight - 20;
+      const fontSize = Math.max(12, height / 40);
+      ctx.font = `${fontSize}px Inter`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      const specsText = `Panel Count: ${config.mapWidth} wide x ${config.mapHeight} high • ${totalPanels} panels total • Resolution: ${width} x ${height} px • Aspect Ratio: ${aspectRatio}`;
+      const metrics = ctx.measureText(specsText);
+      const paddingX = fontSize * 2;
+      const paddingY = fontSize * 1;
+      const boxW = metrics.width + paddingX;
+      const boxH = fontSize + paddingY;
+      
+      const centerX = width / 2;
+      const centerY = height - boxH - 20;
 
       ctx.fillStyle = 'white';
       ctx.strokeStyle = 'black';
       ctx.lineWidth = 2;
-      roundRect(ctx, (width - barWidth) / 2, barY, barWidth, barHeight, 15, true, true);
-
+      ctx.beginPath();
+      ctx.roundRect(centerX - boxW/2, centerY - boxH/2, boxW, boxH, boxH/2);
+      ctx.fill();
+      ctx.stroke();
+      
       ctx.fillStyle = 'black';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(specText, width / 2, barY + barHeight / 2);
+      ctx.fillText(specsText, centerX, centerY);
     }
 
   }, [config, canvasRef]);
@@ -152,200 +151,115 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         x: number;
         y: number;
         pixels: number;
-        col: number;
-        row: number;
     }
 
-    const orderedPanels: PanelPoint[] = [];
     const W = cfg.mapWidth;
     const H = cfg.mapHeight;
+    const pPx = cfg.panelWidthPx * cfg.panelHeightPx;
 
-    if (W <= 0 || H <= 0) return;
+    const units: PanelPoint[][] = [];
+    const isRowPattern = cfg.wiringPattern.startsWith('row');
+    const primaryLimit = isRowPattern ? H : W;
+    const secondaryLimit = isRowPattern ? W : H;
 
-    // First generate the sequence of panels based on pattern
-    for (let i = 0; i < W * H; i++) {
-        let col = 0, row = 0;
-        if (cfg.wiringPattern.startsWith('row')) {
-            row = Math.floor(i / W);
-            col = i % W;
-            if (cfg.wiringPattern === 'row-serpentine' && row % 2 !== 0) col = (W - 1) - col;
-        } else {
-            col = Math.floor(i / H);
-            row = i % H;
-            if (cfg.wiringPattern === 'col-serpentine' && col % 2 !== 0) row = (H - 1) - row;
+    for (let i = 0; i < primaryLimit; i++) {
+        const unit: PanelPoint[] = [];
+        for (let j = 0; j < secondaryLimit; j++) {
+            let col = isRowPattern ? j : i;
+            let row = isRowPattern ? i : j;
+
+            let fCol = col, fRow = row;
+            if (cfg.wiringStartCorner === 'TR') fCol = (W - 1) - col;
+            if (cfg.wiringStartCorner === 'BL') fRow = (H - 1) - row;
+            if (cfg.wiringStartCorner === 'BR') { fCol = (W - 1) - col; fRow = (H - 1) - row; }
+
+            unit.push({
+                x: fCol * cfg.panelWidthPx + cfg.panelWidthPx / 2,
+                y: fRow * cfg.panelHeightPx + cfg.panelHeightPx / 2,
+                pixels: pPx
+            });
         }
-
-        let finalCol = col;
-        let finalRow = row;
-        if (cfg.wiringStartCorner === 'TR') finalCol = (W - 1) - col;
-        if (cfg.wiringStartCorner === 'BL') finalRow = (H - 1) - row;
-        if (cfg.wiringStartCorner === 'BR') {
-            finalCol = (W - 1) - col;
-            finalRow = (H - 1) - row;
-        }
-
-        const pHeight = cfg.panelHeightPx;
-        const pPixels = cfg.panelWidthPx * pHeight;
-        
-        orderedPanels.push({
-            x: finalCol * cfg.panelWidthPx + cfg.panelWidthPx / 2,
-            y: finalRow * cfg.panelHeightPx + pHeight / 2,
-            pixels: pPixels,
-            col: finalCol,
-            row: finalRow
-        });
+        units.push(unit);
     }
 
-    // Now group them into cables respecting boundaries (columns or rows)
-    const unitSize = cfg.wiringPattern.startsWith('col') ? H : W;
     const cables: PanelPoint[][] = [];
     let currentCable: PanelPoint[] = [];
     let currentCablePixels = 0;
 
-    for (let i = 0; i < orderedPanels.length; i += unitSize) {
-        const unit = orderedPanels.slice(i, i + unitSize);
-        const unitPixels = unit.reduce((sum, p) => sum + p.pixels, 0);
-
-        // If this unit (whole col/row) fits in current cable
-        if (currentCablePixels + unitPixels <= MAX_PIXELS_PER_PORT) {
-            currentCable.push(...unit);
-            currentCablePixels += unitPixels;
-        } else {
-            // It doesn't fit. Finish current cable if not empty.
-            if (currentCable.length > 0) {
-                cables.push(currentCable);
-                currentCable = [];
-                currentCablePixels = 0;
-            }
-            
-            // Try to fit the unit into a new cable
-            if (unitPixels <= MAX_PIXELS_PER_PORT) {
-                currentCable.push(...unit);
-                currentCablePixels = unitPixels;
-            } else {
-                // The unit is physically larger than one port budget.
-                // We MUST split this unit at panel level.
-                for (const p of unit) {
-                    if (currentCablePixels + p.pixels > MAX_PIXELS_PER_PORT) {
-                        if (currentCable.length > 0) cables.push(currentCable);
-                        currentCable = [p];
-                        currentCablePixels = p.pixels;
-                    } else {
-                        currentCable.push(p);
-                        currentCablePixels += p.pixels;
-                    }
-                }
-            }
+    units.forEach((unit) => {
+        const unitPixels = unit.length * pPx;
+        if (currentCablePixels + unitPixels > MAX_PIXELS_PER_PORT && currentCable.length > 0) {
+            cables.push(currentCable);
+            currentCable = [];
+            currentCablePixels = 0;
         }
-    }
+        const localIdx = currentCable.length / unit.length;
+        const orderedUnit = (cfg.wiringPattern.includes('serpentine') && localIdx % 2 !== 0) ? [...unit].reverse() : [...unit];
+        currentCable.push(...orderedUnit);
+        currentCablePixels += unitPixels;
+    });
     if (currentCable.length > 0) cables.push(currentCable);
 
-    cables.forEach((cable, cableIndex) => {
-        const color = cableColors[cableIndex % cableColors.length];
-        
-        // Draw the main path line
+    cables.forEach((cable, idx) => {
+        const color = cableColors[idx % cableColors.length];
+        const start = cable[0];
+
         ctx.beginPath();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 6;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-        ctx.moveTo(cable[0].x, cable[0].y);
+        ctx.moveTo(start.x, start.y);
         for (let i = 1; i < cable.length; i++) ctx.lineTo(cable[i].x, cable[i].y);
         ctx.stroke();
 
-        // Draw symbols and markers
-        for (let i = 0; i < cable.length; i++) {
-            const p = cable[i];
-            
-            // Draw node marker
+        cable.forEach((p, i) => {
             if (i === 0) {
-                // Início da linha (Porta) - Triângulo
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2.5;
+                ctx.fillStyle = 'white'; ctx.strokeStyle = color; ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo(p.x, p.y - 14);
-                ctx.lineTo(p.x - 14, p.y + 12);
-                ctx.lineTo(p.x + 14, p.y + 12);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                ctx.moveTo(p.x, p.y - 18); 
+                ctx.lineTo(p.x - 18, p.y + 16); 
+                ctx.lineTo(p.x + 18, p.y + 16);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.font = 'bold 18px Inter'; ctx.fillStyle = 'black'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(`${idx + 1}`, p.x, p.y + 4);
             } else if (i === cable.length - 1) {
-                // Fim da linha - Quadrado
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2.5;
-                ctx.fillRect(p.x - 11, p.y - 11, 22, 22);
-                ctx.strokeRect(p.x - 11, p.y - 11, 22, 22);
+                ctx.fillStyle = 'white'; ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.fillRect(p.x - 12, p.y - 12, 24, 24); ctx.strokeRect(p.x - 12, p.y - 12, 24, 24);
+                
+                const prev = cable[i-1];
+                if (prev) {
+                    const angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(angle);
+                    ctx.fillStyle = color;
+                    ctx.translate(-28, 0); 
+                    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-15, -12); ctx.lineTo(-15, 12); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+                }
             } else {
-                // Pontos intermediários - Círculo
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                ctx.fillStyle = 'white'; ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             }
 
-            // Draw directional arrow on the line segment
             if (i < cable.length - 1) {
                 const next = cable[i+1];
-                const midX = (p.x + next.x) / 2;
-                const midY = (p.y + next.y) / 2;
                 const angle = Math.atan2(next.y - p.y, next.x - p.x);
-                
                 ctx.save();
-                ctx.translate(midX, midY);
+                ctx.translate((p.x + next.x) / 2, (p.y + next.y) / 2);
                 ctx.rotate(angle);
                 ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.moveTo(14, 0);
-                ctx.lineTo(-10, -10);
-                ctx.lineTo(-10, 10);
-                ctx.closePath();
-                ctx.fill();
+                ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-12, -10); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill();
                 ctx.restore();
             }
-        }
+        });
     });
   }
 
-  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: boolean, stroke: boolean) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  }
-
-  function reduce(numerator: number, denominator: number) {
-    const calculateGcd = (a: number, b: number): number => b ? calculateGcd(b, a % b) : a;
-    const commonDivisor = calculateGcd(numerator, denominator);
-    return [numerator / commonDivisor, denominator / commonDivisor];
-  }
-
-  const isInvalidSize = (config.mapWidth <= 0 || config.mapHeight <= 0);
-
   return (
     <div ref={containerRef} className="max-w-full max-h-full flex items-center justify-center p-4">
-      {!isInvalidSize ? (
-        <canvas 
-          ref={canvasRef} 
-          className="max-w-full max-h-[80vh] shadow-2xl bg-black rounded-sm border-4 border-white/10"
-          style={{ imageRendering: 'pixelated' }}
-        />
-      ) : (
-        <div className="text-zinc-400 font-medium italic">Defina as dimensões do mapa para visualizar</div>
-      )}
+      <canvas ref={canvasRef} className="max-w-full max-h-[80vh] shadow-2xl bg-black rounded border-2 border-zinc-800" style={{ imageRendering: 'pixelated' }} />
     </div>
   );
 };
