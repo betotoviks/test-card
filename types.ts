@@ -8,6 +8,7 @@ export interface ScreenConfig {
   panelHeightMm: number;
   panelType: string;
   screenName: string;
+  logoUrl: string | null;
   techSheetTitle: string;
   techSheetStatsTitle: string;
   showScaleOverlay: boolean;
@@ -24,6 +25,8 @@ export interface ScreenConfig {
   // Energy Config
   panelWatts: number;
   voltage: number;
+  // Weight
+  panelWeightKg: number;
   // Processing
   pixelsPerPort: number;
   // Sizing helpers

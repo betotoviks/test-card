@@ -15,6 +15,7 @@ const App: React.FC = () => {
     panelHeightMm: 500,
     panelType: 'P3.91',
     screenName: 'PAINEL LED 01',
+    logoUrl: null,
     techSheetTitle: 'MAPEAMENTO DE PIXELS',
     techSheetStatsTitle: 'LED SPECS',
     showScaleOverlay: true,
@@ -29,6 +30,7 @@ const App: React.FC = () => {
     wiringStartCorner: 'TL',
     panelWatts: 110,
     voltage: 220,
+    panelWeightKg: 8.5,
     pixelsPerPort: 655360,
     targetWidthM: 3,
     targetHeightM: 2
@@ -43,7 +45,7 @@ const App: React.FC = () => {
   const handleExport = useCallback(() => {
     if (!canvasRef.current) return;
     const link = document.createElement('a');
-    link.download = `test-card-${config.screenName.toLowerCase().replace(/\s+/g, '-')}.png`;
+    link.download = `grid-led-${config.screenName.toLowerCase().replace(/\s+/g, '-')}.png`;
     link.href = canvasRef.current.toDataURL('image/png', 1.0);
     link.click();
   }, [config.screenName]);
@@ -55,12 +57,21 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-200 overflow-hidden">
+    <div className="flex h-screen bg-zinc-950 text-zinc-200 overflow-hidden font-inter">
       {/* Sidebar de Controles */}
       <aside className="w-80 border-r border-zinc-900 bg-zinc-950 flex flex-col shrink-0">
-        <div className="p-4 border-b border-zinc-900 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white">GC</div>
-          <h1 className="font-bold text-sm tracking-tight text-white uppercase">Grid Creator</h1>
+        <div className="p-4 border-b border-zinc-900 flex items-center gap-3 bg-zinc-900/20">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden border border-blue-400/30 shadow-lg shadow-blue-900/20">
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <span className="font-black text-[10px] text-white">BETO</span>
+            )}
+          </div>
+          <div className="flex flex-col">
+            <h1 className="font-black text-lg leading-none tracking-tighter text-white uppercase italic">GRID LED</h1>
+            <span className="text-[9px] text-blue-500 font-bold tracking-[0.2em] mt-0.5">PROFESSIONAL TOOL</span>
+          </div>
         </div>
         
         <div className="flex-grow overflow-y-auto custom-scrollbar p-4">
@@ -74,7 +85,7 @@ const App: React.FC = () => {
           />
         </div>
 
-        <div className="p-4 border-t border-zinc-900 grid grid-cols-2 gap-2">
+        <div className="p-4 border-t border-zinc-900 grid grid-cols-2 gap-2 bg-zinc-900/10">
           <button 
             onClick={handleReset}
             className="px-4 py-2 text-[10px] font-bold text-zinc-500 hover:text-zinc-300 uppercase transition-colors"
