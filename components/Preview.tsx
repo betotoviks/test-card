@@ -5,12 +5,30 @@ import { ScreenConfig } from '../types';
 interface PreviewProps {
   config: ScreenConfig;
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  updateConfig?: (newConfig: Partial<ScreenConfig>) => void;
 }
 
 const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
   const logoImageRef = useRef<HTMLImageElement | null>(null);
 
   const calculateGcd = (a: number, b: number): number => b ? calculateGcd(b, a % b) : a;
+
+  const getTagMetrics = (totalW: number, totalH: number, ctx: CanvasRenderingContext2D) => {
+    const fontSize = Math.max(20, totalH / 18);
+    ctx.font = `900 italic ${fontSize}px 'Inter', sans-serif`;
+    const metrics = ctx.measureText(config.screenName || '');
+    const paddingH = fontSize * 0.8;
+    const paddingV = fontSize * 0.4;
+    const boxW = metrics.width + paddingH * 2;
+    const boxH = fontSize + paddingV * 2;
+    
+    const cx = totalW / 2;
+    const cy = (config.logoUrl && logoImageRef.current) 
+      ? (totalH / 2 + (Math.min(totalW, totalH) * 0.15 + boxH)) 
+      : totalH / 2;
+    
+    return { cx, cy, boxW, boxH, fontSize };
+  };
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -92,17 +110,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
 
     // 4. Identificação (Tag)
     if (config.showUserName && config.screenName) {
-      const fontSize = Math.max(20, totalH / 18);
-      ctx.font = `black italic ${fontSize}px 'Inter', sans-serif`;
-      
-      const metrics = ctx.measureText(config.screenName);
-      const paddingH = fontSize * 0.8;
-      const paddingV = fontSize * 0.4;
-      const boxW = metrics.width + paddingH * 2;
-      const boxH = fontSize + paddingV * 2;
-      
-      const cx = totalW / 2;
-      const cy = (config.logoUrl && logoImageRef.current) ? (totalH / 2 + (Math.min(totalW, totalH) * 0.15 + boxH)) : totalH / 2;
+      const { cx, cy, boxW, boxH, fontSize } = getTagMetrics(totalW, totalH, ctx);
 
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -112,6 +120,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.fillStyle = '#000000';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.font = `900 italic ${fontSize}px 'Inter', sans-serif`;
       ctx.fillText(config.screenName.toUpperCase(), cx, cy);
     }
 
@@ -119,7 +128,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     if (config.showSpecs) {
       const gcd = calculateGcd(totalW, totalH);
       const ratio = `${totalW / gcd}:${totalH / gcd}`;
-      // Updated spec text: removed BETO GRID and changed GABINETES to PLACAS
       const specText = `${totalW}x${totalH} PX | ASPECT ${ratio} | ${config.mapWidth * config.mapHeight} PLACAS`;
       
       const fontSize = Math.max(12, totalH / 30);
@@ -135,7 +143,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.roundRect(totalW/2 - barW/2, barY, barW, barH, 6);
       ctx.fill();
 
-      ctx.fillStyle = '#3b82f6'; // Azul Beto Grid
+      ctx.fillStyle = '#3b82f6'; 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(specText, totalW / 2, barY + barH/2);

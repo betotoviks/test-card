@@ -39,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
   const totalPanels = config.mapWidth * config.mapHeight;
   const totalWidthPx = config.mapWidth * config.panelWidthPx;
   const totalHeightPx = config.mapHeight * config.panelHeightPx;
+  const totalPixels = totalWidthPx * totalHeightPx;
   const areaM2 = (config.mapWidth * config.panelWidthMm / 1000) * (config.mapHeight * config.panelHeightMm / 1000);
   
   // Power calculations
@@ -47,6 +48,9 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
   const totalKva = totalKw / 0.85; // Assuming 0.85 power factor for LED power supplies
   const totalAmps = (totalWatts / config.voltage).toFixed(2);
   
+  // Signal/Data Calculations
+  const totalPorts = Math.ceil(totalPixels / config.pixelsPerPort);
+
   const totalWeight = (totalPanels * config.panelWeightKg).toFixed(1);
   const gcd = calculateGcd(totalWidthPx, totalHeightPx);
   const aspectRatio = gcd > 0 ? `${totalWidthPx / gcd}:${totalHeightPx / gcd}` : '0:0';
@@ -162,7 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                       type="number" 
                       value={config.panelWidthPx} 
                       onChange={(e) => updateConfig({ panelWidthPx: parseInt(e.target.value) || 0 })} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white" 
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
                     />
                   </div>
                   <div>
@@ -171,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                       type="number" 
                       value={config.panelHeightPx} 
                       onChange={(e) => updateConfig({ panelHeightPx: parseInt(e.target.value) || 0 })} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white" 
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
                     />
                   </div>
                   <div>
@@ -184,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                         updateConfig({ panelWidthMm: val });
                         updateMapWidthFromPanels(config.mapWidth);
                       }} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white" 
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
                     />
                   </div>
                   <div>
@@ -197,16 +201,25 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                         updateConfig({ panelHeightMm: val });
                         updateMapHeightFromPanels(config.mapHeight);
                       }} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white" 
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
                     />
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Peso por Placa (KG)</label>
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Peso p/ Placa (KG)</label>
                     <input 
                       type="number" 
                       step="0.1"
                       value={config.panelWeightKg} 
                       onChange={(e) => updateConfig({ panelWeightKg: parseFloat(e.target.value) || 0 })} 
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Watts p/ Placa (W)</label>
+                    <input 
+                      type="number" 
+                      value={config.panelWatts} 
+                      onChange={(e) => updateConfig({ panelWatts: parseInt(e.target.value) || 0 })} 
                       className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none" 
                     />
                   </div>
@@ -219,10 +232,17 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
               <div className="grid grid-cols-3 gap-2">
                 {predefinedSizes.map((size, idx) => {
                   const isActive = config.panelWidthPx === size.w && config.panelHeightPx === size.h;
+                  const isSpecialTall = (size.w === 128 && size.h === 256) || (size.w === 168 && size.h === 336);
                   return (
                     <button
                       key={idx}
-                      onClick={() => updateConfig({ panelWidthPx: size.w, panelHeightPx: size.h })}
+                      onClick={() => {
+                        updateConfig({ 
+                          panelWidthPx: size.w, 
+                          panelHeightPx: size.h,
+                          panelHeightMm: isSpecialTall ? 1000 : 500
+                        });
+                      }}
                       className={`py-2 text-[10px] font-bold rounded border transition-all ${
                         isActive 
                           ? 'bg-blue-600/20 border-blue-500 text-blue-400' 
@@ -257,17 +277,6 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                    </button>
                  )}
                </div>
-               
-               <div className="pt-2">
-                <label className="block text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-wider">Identificação do Painel</label>
-                <input 
-                  type="text" 
-                  value={config.screenName} 
-                  onChange={(e) => updateConfig({ screenName: e.target.value })} 
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none focus:border-blue-500 font-mono" 
-                  placeholder="EX: PAINEL PALCO DIREITO"
-                />
-              </div>
             </div>
 
             <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 space-y-4">
@@ -278,14 +287,28 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                 { label: 'Info Bar (Estatísticas)', key: 'showSpecs' },
                 { label: 'Nome no Preview', key: 'showUserName' }
               ].map(item => (
-                <div key={item.key} className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 font-medium">{item.label}</span>
-                  <input 
-                    type="checkbox" 
-                    checked={(config as any)[item.key]} 
-                    onChange={(e) => updateConfig({ [item.key]: e.target.checked })} 
-                    className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-blue-600 focus:ring-blue-500 transition-all" 
-                  />
+                <div key={item.key} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-zinc-400 font-medium">{item.label}</span>
+                    <input 
+                      type="checkbox" 
+                      checked={(config as any)[item.key]} 
+                      onChange={(e) => updateConfig({ [item.key]: e.target.checked })} 
+                      className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-blue-600 focus:ring-blue-500 transition-all" 
+                    />
+                  </div>
+                  {item.key === 'showUserName' && config.showUserName && (
+                    <div className="animate-in slide-in-from-top-1 duration-200">
+                      <label className="block text-[8px] text-zinc-600 uppercase font-black mb-1 tracking-widest">Nome do Painel</label>
+                      <input 
+                        type="text" 
+                        value={config.screenName} 
+                        onChange={(e) => updateConfig({ screenName: e.target.value.toUpperCase() })} 
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none focus:border-blue-500 font-mono uppercase" 
+                        placeholder="EX: PAINEL LED 01"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -296,30 +319,40 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
           <div className="space-y-4 animate-in fade-in duration-300">
             <h2 className="text-xs font-bold text-blue-500 uppercase tracking-widest italic">Análise de Dados</h2>
             
-            <div className="space-y-2">
-              <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Tensão da Rede</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[110, 220, 380].map(v => (
-                  <button 
-                    key={v}
-                    onClick={() => updateConfig({ voltage: v })}
-                    className={`py-2 text-[10px] font-bold rounded border transition-all ${config.voltage === v ? 'bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/20' : 'bg-zinc-900 border-zinc-800 text-zinc-600 hover:text-zinc-400'}`}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+               <div>
+                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Tensão Rede</label>
+                  <select 
+                    value={config.voltage} 
+                    onChange={(e) => updateConfig({ voltage: parseInt(e.target.value) })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-[10px] text-white focus:border-blue-500 outline-none"
                   >
-                    {v}V
-                  </button>
-                ))}
-              </div>
+                    <option value={110}>110V</option>
+                    <option value={220}>220V</option>
+                    <option value={380}>380V</option>
+                  </select>
+               </div>
+               <div>
+                  <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Pixels p/ Saída</label>
+                  <input 
+                    type="number" 
+                    value={config.pixelsPerPort} 
+                    onChange={(e) => updateConfig({ pixelsPerPort: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-[10px] text-white focus:border-blue-500 outline-none"
+                  />
+               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
                {[
                  { label: 'Total de Placas', value: totalPanels, unit: 'UN' },
-                 { label: 'Total de Pixels', value: `${totalWidthPx}x${totalHeightPx}`, unit: 'PX' },
+                 { label: 'Resolução Total', value: `${totalWidthPx}x${totalHeightPx}`, unit: 'PX' },
                  { label: 'Área Total', value: areaM2.toFixed(2), unit: 'm²' },
                  { label: 'Potência Real', value: totalKw.toFixed(2), unit: 'kW' },
                  { label: 'Consumo Total', value: totalKva.toFixed(2), unit: 'kVA' },
                  { label: 'Amperagem Total', value: totalAmps, unit: 'A' },
                  { label: 'Peso Estimado', value: totalWeight, unit: 'KG' },
+                 { label: 'Saídas de Sinal', value: totalPorts, unit: 'Portas' },
                  { label: 'Aspect Ratio', value: aspectRatio, unit: '' },
                ].map((item, i) => (
                  <div key={i} className="bg-zinc-900/40 border border-zinc-800/60 p-3 rounded-lg flex justify-between items-center group hover:border-zinc-700 transition-all">

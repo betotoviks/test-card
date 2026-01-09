@@ -14,7 +14,7 @@ const App: React.FC = () => {
     panelWidthMm: 500,
     panelHeightMm: 500,
     panelType: 'P3.91',
-    screenName: 'PAINEL LED 01',
+    screenName: 'TELA',
     logoUrl: null,
     techSheetTitle: 'MAPEAMENTO DE PIXELS',
     techSheetStatsTitle: 'LED SPECS',
@@ -103,7 +103,7 @@ const App: React.FC = () => {
 
       {/* Área do Preview */}
       <main className="flex-grow relative bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900 to-black overflow-hidden flex items-center justify-center p-8">
-        <Preview config={config} canvasRef={canvasRef} />
+        <Preview config={config} canvasRef={canvasRef} updateConfig={updateConfig} />
       </main>
     </div>
   );
