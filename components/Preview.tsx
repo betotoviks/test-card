@@ -67,23 +67,25 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
   };
 
   const drawArrow = (ctx: CanvasRenderingContext2D, fromX: number, fromY: number, toX: number, toY: number, size: number) => {
-    const headlen = size;
+    const headlen = size * 1.5; // Tornar a seta mais visível
     const dx = toX - fromX;
     const dy = toY - fromY;
     const angle = Math.atan2(dy, dx);
     
+    // Desenha a linha
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, toY);
     ctx.stroke();
 
-    const midX = fromX + dx * 0.55;
-    const midY = fromY + dy * 0.55;
+    // Desenha a cabeça da seta no meio do caminho
+    const midX = fromX + dx * 0.5;
+    const midY = fromY + dy * 0.5;
     
     ctx.beginPath();
     ctx.moveTo(midX, midY);
-    ctx.lineTo(midX - headlen * Math.cos(angle - Math.PI / 6), midY - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(midX - headlen * Math.cos(angle + Math.PI / 6), midY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.lineTo(midX - headlen * Math.cos(angle - Math.PI / 5), midY - headlen * Math.sin(angle - Math.PI / 5));
+    ctx.lineTo(midX - headlen * Math.cos(angle + Math.PI / 5), midY - headlen * Math.sin(angle + Math.PI / 5));
     ctx.closePath();
     ctx.fill();
   };
@@ -142,7 +144,6 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
     let currentPortIndex = 0;
     let currentPortPixels = 0;
 
-    // First, group by strip (column or row)
     const strips: any[][] = [];
     let currentStripId = -1;
     path.forEach(p => {
@@ -153,19 +154,12 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       strips[strips.length - 1].push(p);
     });
 
-    // Assign ports to strips
     strips.forEach(strip => {
       const stripPixels = strip.length * pixelsPerPanel;
-      // Se a tira inteira cabe no que resta da porta, adiciona
-      // Exceto se a porta estiver vazia, aí a tira entra de qualquer jeito (pelo menos a primeira parte)
       if (currentPortPixels > 0 && currentPortPixels + stripPixels > config.pixelsPerPort) {
         currentPortIndex++;
         currentPortPixels = 0;
       }
-      
-      // Se a tira sozinha for maior que o limite (raro mas possível), ela terá que quebrar,
-      // mas o requisito do usuário é "não começar na mesma coluna", o que implica 
-      // colunas inteiras por porta.
       strip.forEach(() => {
         portAssignments.push(currentPortIndex);
       });
@@ -181,15 +175,15 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         ctx.font = `900 ${fontSize}px 'Inter', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
         ctx.fillText((i + 1).toString(), x + config.panelWidthPx / 2, y + config.panelHeightPx / 2);
       });
     }
 
     // 2. Wiring Flow
     if (config.showWiring) {
-      const lineWidth = Math.max(2, config.panelWidthPx / 35);
-      const dotRadius = Math.max(3, config.panelWidthPx / 22);
+      const lineWidth = Math.max(3, config.panelWidthPx / 30);
+      const dotRadius = Math.max(4, config.panelWidthPx / 20);
 
       path.forEach((p, i) => {
         const next = path[i + 1];
@@ -205,22 +199,21 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
 
-        // Check Port boundaries
         const isPortStart = i === 0 || portAssignments[i-1] !== portIdx;
         const isPortEnd = i === path.length - 1 || portAssignments[i+1] !== portIdx;
 
-        // Draw segments
+        // Desenha os segmentos com setas
         if (next && portAssignments[i+1] === portIdx) {
           const nextCenterX = next.x * config.panelWidthPx + config.panelWidthPx / 2;
           const nextCenterY = next.y * config.panelHeightPx + config.panelHeightPx / 2;
-          drawArrow(ctx, centerX, centerY, nextCenterX, nextCenterY, dotRadius * 1.5);
+          drawArrow(ctx, centerX, centerY, nextCenterX, nextCenterY, dotRadius * 1.8);
         }
 
-        // Draw Markers
+        // Desenha os Marcadores Especiais
         if (isPortStart) {
-          // Triangle at start
+          // Triângulo maior no início do cabo
           ctx.save();
-          const tSize = dotRadius * 2.2;
+          const tSize = dotRadius * 2.5;
           const nextP = next || p;
           const angle = Math.atan2(nextP.y - p.y, nextP.x - p.x);
           ctx.translate(centerX, centerY);
@@ -233,11 +226,11 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
           ctx.fill();
           ctx.restore();
         } else if (isPortEnd) {
-          // Square at end
-          const sSize = dotRadius * 2.5;
+          // Quadrado maior no fim do cabo
+          const sSize = dotRadius * 2.8;
           ctx.fillRect(centerX - sSize/2, centerY - sSize/2, sSize, sSize);
         } else {
-          // Circle for others
+          // Ponto simples para conexões intermediárias
           ctx.beginPath();
           ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2);
           ctx.fill();
@@ -260,7 +253,7 @@ const Preview: React.FC<PreviewProps> = ({ config, canvasRef }) => {
       ctx.restore();
     }
 
-    // 4. Scale Overlay (Dashed lines)
+    // 4. Scale Overlay
     if (config.showScaleOverlay) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = Math.max(1, totalW / 1000);
