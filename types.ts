@@ -11,6 +11,12 @@ export interface ScreenConfig {
   logoUrl: string | null;
   techSheetTitle: string;
   techSheetStatsTitle: string;
+  // Tech Sheet Specific Extra Fields
+  softwareVideo: string;
+  fileFormat: string;
+  videoCodec: string;
+  videoFps: string;
+  
   showScaleOverlay: boolean;
   showUserName: boolean;
   showSpecs: boolean;

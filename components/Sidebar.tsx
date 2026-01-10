@@ -46,20 +46,18 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
   const totalKw = totalWatts / 1000;
   const totalKva = totalKw / 0.8; 
   const totalAmps = (totalWatts / config.voltage).toFixed(2);
+  const totalWeight = (totalPanels * config.panelWeightKg).toFixed(1);
+  const gcd = calculateGcd(totalWidthPx, totalHeightPx);
+  const aspectRatio = gcd > 0 ? `${totalWidthPx / gcd}:${totalHeightPx / gcd}` : '0:0';
   
-  // Logic for Port Calculation (Must match Preview logic)
   const pixelsPerPanel = config.panelWidthPx * config.panelHeightPx;
   const totalPorts = (() => {
-    // Basic logic: if flow is column based, calculate ports based on full columns
-    // if row based, based on full rows. This matches the 'strip-based' logic in Preview.
     const isColFlow = config.wiringPattern.startsWith('col');
     const stripSize = isColFlow ? config.mapHeight : config.mapWidth;
     const pixelsPerStrip = stripSize * pixelsPerPanel;
-    
     let ports = 1;
     let currentPortPixels = 0;
     const numStrips = isColFlow ? config.mapWidth : config.mapHeight;
-
     for (let i = 0; i < numStrips; i++) {
       if (currentPortPixels > 0 && currentPortPixels + pixelsPerStrip > config.pixelsPerPort) {
         ports++;
@@ -70,13 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
     return ports;
   })();
 
-  const totalWeight = (totalPanels * config.panelWeightKg).toFixed(1);
-  const gcd = calculateGcd(totalWidthPx, totalHeightPx);
-  const aspectRatio = gcd > 0 ? `${totalWidthPx / gcd}:${totalHeightPx / gcd}` : '0:0';
-
-  const formatNumber = (num: number) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
+  const formatNumber = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
   const updateMapWidthFromMeters = (m: number) => {
     const panels = Math.max(1, Math.round((m * 1000) / config.panelWidthMm));
@@ -117,20 +109,24 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
     { name: 'Ouro', c1: '#78350f', c2: '#92400e' },
   ];
 
-  const wiringPatterns = [
-    // TL - Top Left
-    { id: 'row-serpentine', start: 'TL', icon: '⇄', label: 'TL H' },
-    { id: 'col-serpentine', start: 'TL', icon: '⇅', label: 'TL V' },
-    // TR - Top Right
-    { id: 'row-serpentine', start: 'TR', icon: '⇄', label: 'TR H' },
-    { id: 'col-serpentine', start: 'TR', icon: '⇅', label: 'TR V' },
-    // BL - Bottom Left
-    { id: 'row-serpentine', start: 'BL', icon: '⇄', label: 'BL H' },
-    { id: 'col-serpentine', start: 'BL', icon: '⇅', label: 'BL V' },
-    // BR - Bottom Right
-    { id: 'row-serpentine', start: 'BR', icon: '⇄', label: 'BR H' },
-    { id: 'col-serpentine', start: 'BR', icon: '⇅', label: 'BR V' },
-  ];
+  const handleRandomizeColors = () => {
+    const h = Math.floor(Math.random() * 360);
+    const s = 40 + Math.floor(Math.random() * 40);
+    const l1 = 15 + Math.floor(Math.random() * 20);
+    const l2 = 45 + Math.floor(Math.random() * 25);
+    const h2 = (h + 5 + Math.random() * 20) % 360;
+    const hslToHex = (h: number, s: number, l: number) => {
+      l /= 100;
+      const a = s * Math.min(l, 1 - l) / 100;
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+      };
+      return `#${f(0)}${f(8)}${f(4)}`;
+    };
+    updateConfig({ color1: hslToHex(h, s, l1), color2: hslToHex(h2, s, l2) });
+  };
 
   const handleSizePreset = (size: typeof predefinedSizes[0]) => {
     const newMapWidth = Math.max(1, Math.round((config.targetWidthM * 1000) / size.mmW));
@@ -145,6 +141,17 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
       mapHeight: newMapHeight
     });
   };
+
+  const wiringPatterns = [
+    { id: 'row-serpentine', start: 'TL', icon: '⇄', label: 'TL H' },
+    { id: 'col-serpentine', start: 'TL', icon: '⇅', label: 'TL V' },
+    { id: 'row-serpentine', start: 'TR', icon: '⇄', label: 'TR H' },
+    { id: 'col-serpentine', start: 'TR', icon: '⇅', label: 'TR V' },
+    { id: 'row-serpentine', start: 'BL', icon: '⇄', label: 'BL H' },
+    { id: 'col-serpentine', start: 'BL', icon: '⇅', label: 'BL V' },
+    { id: 'row-serpentine', start: 'BR', icon: '⇄', label: 'BR H' },
+    { id: 'col-serpentine', start: 'BR', icon: '⇅', label: 'BR V' },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,51 +172,27 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Largura (N)</label>
-                    <input 
-                      type="number" 
-                      value={config.mapWidth} 
-                      onChange={(e) => updateMapWidthFromPanels(Math.max(1, parseInt(e.target.value) || 0))} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" 
-                    />
+                    <input type="number" value={config.mapWidth} onChange={(e) => updateMapWidthFromPanels(Math.max(1, parseInt(e.target.value) || 0))} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" />
                   </div>
                   <div>
                     <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Altura (N)</label>
-                    <input 
-                      type="number" 
-                      value={config.mapHeight} 
-                      onChange={(e) => updateMapHeightFromPanels(Math.max(1, parseInt(e.target.value) || 0))} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" 
-                    />
+                    <input type="number" value={config.mapHeight} onChange={(e) => updateMapHeightFromPanels(Math.max(1, parseInt(e.target.value) || 0))} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" />
                   </div>
                </div>
             </div>
-
             <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 space-y-4">
                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tamanho por Metro</h3>
                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Largura (M)</label>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      value={config.targetWidthM} 
-                      onChange={(e) => updateMapWidthFromMeters(parseFloat(e.target.value) || 0)} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" 
-                    />
+                    <input type="number" step="0.1" value={config.targetWidthM} onChange={(e) => updateMapWidthFromMeters(parseFloat(e.target.value) || 0)} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" />
                   </div>
                   <div>
                     <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Altura (M)</label>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      value={config.targetHeightM} 
-                      onChange={(e) => updateMapHeightFromMeters(parseFloat(e.target.value) || 0)} 
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" 
-                    />
+                    <input type="number" step="0.1" value={config.targetHeightM} onChange={(e) => updateMapHeightFromMeters(parseFloat(e.target.value) || 0)} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-sm text-white focus:border-blue-500 outline-none font-bold" />
                   </div>
                </div>
             </div>
-
             <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 space-y-4">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Configuração do Painel</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -239,7 +222,6 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
                 </div>
               </div>
             </div>
-
             <div className="space-y-3">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tamanhos Pré-definidos</h3>
               <div className="grid grid-cols-3 gap-2">
@@ -295,7 +277,10 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
         {activeTab === TabType.COR && (
            <div className="space-y-4 animate-in fade-in duration-300">
              <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 space-y-4">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Paleta do Mapa</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Paleta do Mapa</h3>
+                  <button onClick={handleRandomizeColors} className="text-[9px] bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 px-2 py-1 rounded font-bold uppercase tracking-widest transition-all">Aleatório ✨</button>
+                </div>
                 <div className="space-y-3">
                   <div className="space-y-2">
                      <label className="block text-[9px] text-zinc-500 uppercase font-bold">Principal</label>
@@ -419,15 +404,31 @@ const Sidebar: React.FC<SidebarProps> = ({ config, activeTab, setActiveTab, upda
         {activeTab === TabType.FICHA_TECNICA && (
           <div className="space-y-4 animate-in fade-in duration-300">
              <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 space-y-4">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Personalizar Ficha</h3>
+                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest italic">PERSONALIZAR FICHA</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Título Principal</label>
-                    <input type="text" value={config.techSheetTitle} onChange={(e) => updateConfig({ techSheetTitle: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white" />
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Título Principal</label>
+                    <input type="text" value={config.techSheetTitle} onChange={(e) => updateConfig({ techSheetTitle: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-zinc-500 mb-1 uppercase font-bold">Título Stats</label>
-                    <input type="text" value={config.techSheetStatsTitle} onChange={(e) => updateConfig({ techSheetStatsTitle: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white" />
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Título Stats (LED)</label>
+                    <input type="text" value={config.techSheetStatsTitle} onChange={(e) => updateConfig({ techSheetStatsTitle: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none focus:border-blue-500" />
+                  </div>
+                  <div className="pt-2 border-t border-zinc-800/50">
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Software de Vídeo</label>
+                    <input type="text" value={config.softwareVideo} onChange={(e) => updateConfig({ softwareVideo: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Formato de Arquivo</label>
+                    <input type="text" value={config.fileFormat} onChange={(e) => updateConfig({ fileFormat: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Codec</label>
+                    <input type="text" value={config.videoCodec} onChange={(e) => updateConfig({ videoCodec: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] text-zinc-500 mb-1 uppercase font-bold">Taxa de Quadros (FPS)</label>
+                    <input type="text" value={config.videoFps} onChange={(e) => updateConfig({ videoFps: e.target.value.toUpperCase() })} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-xs text-white outline-none" />
                   </div>
                 </div>
              </div>
