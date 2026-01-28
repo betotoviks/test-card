@@ -17,10 +17,16 @@ export interface ScreenConfig {
   videoCodec: string;
   videoFps: string;
   
+  // Logo adjustment fields
+  logoPosX: number;
+  logoPosY: number;
+  logoScale: number;
+  
   showScaleOverlay: boolean;
   showUserName: boolean;
   showSpecs: boolean;
   showCoords: boolean;
+  showMiniMap: boolean;
   color1: string;
   color2: string;
   showBackground: boolean;
